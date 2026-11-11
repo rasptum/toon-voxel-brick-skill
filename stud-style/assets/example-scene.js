@@ -9,17 +9,18 @@ var root = BK.pivot(stage.scene);
 var POT = '#c8643c', GREEN = '#4caf50', DARKGREEN = '#2f8f46', SOIL = '#6b4226';
 var WHITE = '#ffffff', PINK = '#ff5fa2', YELLOW = '#ffd23f';
 
-// Pot: a narrower base and a wider rim, so the taper reads as steps.
+// Pot: a narrower base and a wider rim, so the taper reads as steps. Static parts stack
+// flush; the size step between them is what draws the outline.
 BK.block({ parent: root, size: [7, 2, 7], color: POT, studs: 'hollow', anchor: 'bottom', at: [0, 0, 0] });
-BK.block({ parent: root, size: [8, 3, 8], color: POT, studs: 'hollow', anchor: 'bottom', at: [0, 2.2, 0] });
-BK.block({ parent: root, size: [9, 1.5, 9], color: BK.shade(POT, 0.1), studs: 'hollow', anchor: 'bottom', at: [0, 5.4, 0] });
-BK.block({ parent: root, size: [7, 0.6, 7], color: SOIL, studs: 'checker', bevel: false, anchor: 'bottom', at: [0, 6.9, 0] });
+BK.block({ parent: root, size: [8, 3, 8], color: POT, studs: 'hollow', anchor: 'bottom', at: [0, 2, 0] });
+BK.block({ parent: root, size: [9, 1.5, 9], color: BK.shade(POT, 0.1), studs: 'hollow', anchor: 'bottom', at: [0, 5, 0] });
+BK.block({ parent: root, size: [7, 0.6, 7], color: SOIL, studs: 'checker', bevel: false, anchor: 'bottom', at: [0, 6.5, 0] });
 // Icing-style zigzag trim: raised cubes, not paint.
-BK.zigzag({ parent: root, count: 14, cube: 0.5, color: WHITE, at: [0, 3.2, 4.25] });
+BK.zigzag({ parent: root, count: 14, cube: 0.5, color: WHITE, at: [0, 3, 4.25] });
 
 // Body rotates at the soil line, so it hangs off a BK.joint (pivot + filler block) and sinks
 // 0.3 past the pivot: the droop can never open a see-through gap.
-var body = BK.joint(root, [0, 7.7, 0], { color: GREEN, size: 4.5 });
+var body = BK.joint(root, [0, 7.1, 0], { color: GREEN, size: 4.5 });
 BK.block({ parent: body, size: [6, 11.3, 6], color: GREEN, studs: 'columns', anchor: 'bottom', at: [0, -0.3, 0] });
 // Rounded top becomes a two-step staircase.
 BK.block({ parent: body, size: [5, 1.2, 5], color: GREEN, studs: 'solid', anchor: 'bottom', at: [0, 11.2, 0] });
@@ -29,10 +30,10 @@ BK.detail({ parent: body, size: [1.5, 1, 1.5], color: PINK, at: [0, 14.3, 0] });
 BK.detail({ parent: body, size: [0.7, 0.5, 0.7], color: YELLOW, at: [0, 15.05, 0] });
 
 // Arms: two segments each, the second narrower so the elbow shows as a step. The stub is
-// static (a 0.2 seam to the body reads as outline); the elbow rotates, so it is a BK.joint.
+// static, so it sits flush against the body; the elbow rotates, so it is a BK.joint.
 // For ordinary hanging arms, legs and tails use BK.limb, which does all of this for you.
 function arm(side, y, upper) {
-  var shoulder = BK.pivot(body, [side * 3.2, y, 0]);
+  var shoulder = BK.pivot(body, [side * 3, y, 0]);
   BK.block({ parent: shoulder, size: [3, 2.5, 3], color: DARKGREEN, studs: 'rows', at: [side * 1.5, 0, 0] });
   var elbow = BK.joint(shoulder, [side * 1.75, 1.25, 0], { color: DARKGREEN, size: 2 });
   BK.block({ parent: elbow, size: [2.5, upper, 2.5], color: DARKGREEN, studs: 'rows', anchor: 'bottom', at: [0, -0.3, 0] });

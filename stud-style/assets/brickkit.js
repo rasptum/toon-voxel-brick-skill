@@ -24,7 +24,8 @@
   var texCache = {};
   var matCache = {};
 
-  // 2x2 stud tile, row-major from the top. 1 = filled (raised), 0 = hollow (sunk).
+  // 2x2 stud tile, row-major from the top. Two stud variants: 1 = filled (solid raised
+  // square), 0 = hollow (raised square rim with a sunk centre). Patterns mix the two.
   BK.PATTERNS = {
     solid:   [1, 1, 1, 1],
     checker: [1, 0, 0, 1],
@@ -56,7 +57,7 @@
     if (texCache[pattern]) return texCache[pattern];
     var cells = BK.PATTERNS[pattern] || BK.PATTERNS.solid;
     var S = 512, C = S / 2;
-    var HALF = 0.5, RAD = 0.09, BEV = 0.1;   // in half-cell units
+    var HALF = 0.5, RAD = 0.09, BEV = 0.1, RIM = 0.17;   // in half-cell units
     var H = new Float32Array(S * S), AO = new Float32Array(S * S);
     var seed = 1337;
     function rnd() { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; }
@@ -67,11 +68,14 @@
       var py = Math.abs((y + 0.5 - (cy + 0.5) * C) / (C / 2)) - (HALF - RAD);
       var qx = Math.max(px, 0), qy = Math.max(py, 0);
       var sd = Math.sqrt(qx * qx + qy * qy) + Math.min(Math.max(px, py), 0) - RAD; // <0 inside
-      var up = cells[cy * 2 + cx] ? 1 : -1;
+      var filled = cells[cy * 2 + cx];
       var ramp = Math.min(1, Math.max(0, -sd / BEV));       // 0 outside, 1 on the plateau
-      H[y * S + x] = up * ramp + (rnd() - 0.5) * 0.012;
+      // Variant A (filled): a solid raised square. Variant B (hollow): the same square
+      // outline as a raised rim with a sunk centre, like an open-topped stud.
+      var pit = filled ? 0 : Math.min(1, Math.max(0, (-sd - RIM) / BEV));
+      H[y * S + x] = ramp - 1.4 * pit + (rnd() - 0.5) * 0.012;
       AO[y * S + x] = sd > 0 ? 1 - 0.11 * Math.exp(-sd * sd / 0.03)
-                             : (up > 0 ? 0.89 + 0.11 * ramp : 0.89 - 0.06 * ramp);
+                             : 0.89 + 0.11 * ramp - 0.22 * pit;
     }
     var K = BEV * (C / 2) / 2;   // makes the bevel read as a 45-degree face
     var dc = document.createElement('canvas'), nc = document.createElement('canvas');
@@ -119,7 +123,13 @@
     return matCache[key];
   }
 
-  var outlineMat = new THREE.MeshBasicMaterial({ color: 0x000000, side: THREE.BackSide });
+  // polygonOffset pushes the black hull slightly back in depth, so wherever a hull lies on or
+  // skims another block's surface the coloured face wins cleanly instead of flickering.
+  var outlineMat = new THREE.MeshBasicMaterial({
+    color: 0x000000, side: THREE.BackSide,
+    polygonOffset: true, polygonOffsetFactor: 3, polygonOffsetUnits: 12
+  });
+  var pieceCount = 0;
 
   // Every face of every box carries a whole number of studs. Pitch is the world-scale
   // stud size (1 unit, or 0.5 in HD); faces too thin for that halve it until a stud fits,
@@ -145,6 +155,9 @@
     applyStudUVs(geo, w, h, d);
     var mesh = new THREE.Mesh(geo, material(color, pattern));
     mesh.position.y = y;
+    // A hair of per-piece size variation, far too small to see, stops two blocks that
+    // share a face plane from flickering against each other.
+    mesh.scale.setScalar(1 + (pieceCount++ % 7) * 0.0005);
     mesh.userData.bkDims = [w, h, d];
     group.add(mesh);
     studded.push(mesh);
